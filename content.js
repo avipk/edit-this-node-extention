@@ -1,6 +1,12 @@
-console.info(':::::::::: context menu file');
+const editThisNodeState = {
+    lastRightClickX: 0,
+    lastRightClickY: 0,
+    node: null
+};
+
+window.__editThisNodeState = editThisNodeState;
+
 document.addEventListener("contextmenu", (event) => {
-    console.info(':::::::::: context menu');
-    window.lastRightClickX = event.clientX;
-    window.lastRightClickY = event.clientY;
+    editThisNodeState.lastRightClickX = event.clientX;
+    editThisNodeState.lastRightClickY = event.clientY;
 });

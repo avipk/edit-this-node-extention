@@ -1,4 +1,5 @@
 chrome.runtime.onInstalled.addListener(() => {
+    // Creates a context menu-item
     chrome.contextMenus.create({
         id: "edit-node",
         title: "Edit this node",
@@ -7,6 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+    // If user clicked the "Edit this node" menu-item
     if (info.menuItemId === "edit-node") {
         chrome.scripting.executeScript({
             target: { tabId: tab.id },
@@ -15,26 +17,41 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
 });
 
+function clearEditableNode() {
+    const state = window.__editThisNodeState;
+    clearEditableNode();
+}
+
 function enableEditMode() {
+    // When clicking out-side the element, removes the contenteditable.
+    const state = window.__editThisNodeState;
+
     document.addEventListener("click", (event) => {
-        if (window.editingNode) {
-            window.editingNode.contentEditable = "false";
-            window.editingNode = null;
+        const editableNode = event.target.closest('[contentEditable]');
+        // If click occured inside the editable node. cancel operation
+        if (editableNode) {
+            event.preventDefault();
+        }
+        // If click occured outside the editable node, asume  cancel operation
+        else if (state.node) {
+            event.preventDefault();
+            state.node.removeAttribute('contentEditable');
+            state.node = null;
         }
     }, { capture: true });
 
+    // disable the context-menu when edit is on ?
     document.addEventListener("contextmenu", (event) => {
-        if (window.editingNode) {
+        if (state.node) {
             event.preventDefault();
         }
     });
 
-    const targetNode = document.elementFromPoint(window.lastRightClickX, window.lastRightClickY);
-    if (targetNode && targetNode.nodeType === Node.TEXT_NODE) {
-        const editableNode = targetNode.parentNode;
-        window.editingNode = editableNode;
-        editableNode.contentEditable = "true";
-        editableNode.classList.add("editing");
+    const targetNode = document.elementFromPoint(state.lastRightClickX, state.lastRightClickY);
+    if (targetNode) {
+        const editableNode = targetNode.closest(':not(:empty)');
+        state.node = editableNode;
+        editableNode.setAttribute('contentEditable', true);
         editableNode.focus();
 
         const range = document.createRange();
@@ -43,10 +60,6 @@ function enableEditMode() {
         selection.removeAllRanges();
         selection.addRange(range);
 
-        editableNode.addEventListener("blur", () => {
-            editableNode.contentEditable = "false";
-            editableNode.classList.remove("editing");
-            window.editingNode = null;
-        });
+        editableNode.addEventListener("blur", clearEditableNode);
     }
 }
