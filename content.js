@@ -1,7 +1,8 @@
 const editThisNodeState = {
-    lastRightClickX: 0,
-    lastRightClickY: 0,
-    node: null
+    lastRightClickX: -1,
+    lastRightClickY: -1,
+    node: null,
+    originalContent: null
 };
 
 window.__editThisNodeState = editThisNodeState;

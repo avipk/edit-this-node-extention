@@ -17,12 +17,66 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
 });
 
-function clearEditableNode() {
-    const state = window.__editThisNodeState;
-    clearEditableNode();
-}
-
 function enableEditMode() {
+    const EMPTY_NODE_SELECTOR = ':is(span,div,a):is(:empty)';
+    const NODE_WITH_TEXT_SELECTOR = ':not(:empty)';
+
+    function disableEditMode() {
+        const state = window.__editThisNodeState;
+        enableEmptyNodes();
+        state.node.removeAttribute('contentEditable');
+        state.node.removeEventListener('blur', disableEditMode);
+        state.node = null;
+        state.originalContent = null;
+        state.lastRightClickX = -1;
+        state.lastRightClickY = -1;
+        document.removeEventListener('keydown', handleKeyDown);
+    }
+
+    function disableEmptyNodes() {
+        const state = window.__editThisNodeState;
+        const emptyNodes = state.node.querySelectorAll(EMPTY_NODE_SELECTOR);
+        emptyNodes.forEach(emptyNode => {
+            emptyNode.setAttribute('data-display', emptyNode.style.display)
+            emptyNode.style.display = 'none';
+        });
+    }
+
+    function enableEmptyNodes() {
+        const state = window.__editThisNodeState;
+        const emptyNodes = state.node.querySelectorAll(EMPTY_NODE_SELECTOR);
+        emptyNodes.forEach(emptyNode => {
+            if (emptyNode.hasAttribute('data-display')) {
+                emptyNode.style.display = emptyNode.style.display = emptyNode.getAttribute('data-display');
+                emptyNode.removeAttribute('data-display');
+            }
+        });
+    }
+
+    function isEditMode() {
+        return !!window?.__editThisNodeState?.node;
+
+    }
+
+    function handleKeyDown(event) {
+        const keyCode = event.keyCode;
+
+        switch (keyCode) {
+            case 13: // enter
+                event.preventDefault();
+                disableEditMode();
+                break;
+            case 27: // escape
+                const state = window.__editThisNodeState;
+                state.node.innerHTML = state.originalContent;
+                event.preventDefault();
+                disableEditMode();
+                break;
+            default:
+            // do nothing      
+        }
+    }
+
     // When clicking out-side the element, removes the contenteditable.
     const state = window.__editThisNodeState;
 
@@ -33,10 +87,9 @@ function enableEditMode() {
             event.preventDefault();
         }
         // If click occured outside the editable node, asume  cancel operation
-        else if (state.node) {
+        else if (isEditMode()) {
             event.preventDefault();
-            state.node.removeAttribute('contentEditable');
-            state.node = null;
+            disableEditMode();
         }
     }, { capture: true });
 
@@ -47,10 +100,17 @@ function enableEditMode() {
         }
     });
 
-    const targetNode = document.elementFromPoint(state.lastRightClickX, state.lastRightClickY);
+    const hasLegalCordinates = state.lastRightClickX > 0 && state.lastRightClickY > 0;
+    if (!hasLegalCordinates) {
+        alert('Unable to get cordinates for the element');
+    }
+
+    const targetNode = hasLegalCordinates && document.elementFromPoint(state.lastRightClickX, state.lastRightClickY);
     if (targetNode) {
-        const editableNode = targetNode.closest(':not(:empty)');
+        const editableNode = targetNode.closest(NODE_WITH_TEXT_SELECTOR);
         state.node = editableNode;
+        state.originalContent = state.node.innerHTML;
+
         editableNode.setAttribute('contentEditable', true);
         editableNode.focus();
 
@@ -60,6 +120,8 @@ function enableEditMode() {
         selection.removeAllRanges();
         selection.addRange(range);
 
-        editableNode.addEventListener("blur", clearEditableNode);
+        editableNode.addEventListener("blur", disableEditMode);
+        disableEmptyNodes();
+        document.addEventListener('keydown', handleKeyDown);
     }
 }
