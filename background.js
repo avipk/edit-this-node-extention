@@ -93,13 +93,6 @@ function enableEditMode() {
         }
     }, { capture: true });
 
-    // disable the context-menu when edit is on ?
-    document.addEventListener("contextmenu", (event) => {
-        if (state.node) {
-            event.preventDefault();
-        }
-    });
-
     const hasLegalCordinates = state.lastRightClickX > 0 && state.lastRightClickY > 0;
     if (!hasLegalCordinates) {
         alert('Unable to get cordinates for the element');
