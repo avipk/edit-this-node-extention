@@ -26,6 +26,7 @@ function enableEditMode() {
         enableEmptyNodes();
         state.node.removeAttribute('contentEditable');
         state.node.removeEventListener('blur', disableEditMode);
+        state.node.removeEventListener('paste', handlePaste);
         state.node = null;
         state.originalContent = null;
         state.lastRightClickX = -1;
@@ -77,6 +78,16 @@ function enableEditMode() {
         }
     }
 
+    function handlePaste(event) {
+        console.info(':::::::::: paste handler');
+        event.preventDefault();
+
+        let paste = (event.clipboardData || window.clipboardData).getData("text");
+        const selection = window.getSelection();
+        selection.deleteFromDocument();
+        selection.getRangeAt(0).insertNode(document.createTextNode(paste));
+    }
+
     // When clicking out-side the element, removes the contenteditable.
     const state = window.__editThisNodeState;
 
@@ -84,7 +95,7 @@ function enableEditMode() {
         const editableNode = event.target.closest('[contentEditable]');
         // If click occured inside the editable node. cancel operation
         if (editableNode) {
-            event.preventDefault();
+            event.preventDefault();            
         }
         // If click occured outside the editable node, asume  cancel operation
         else if (isEditMode()) {
@@ -113,6 +124,7 @@ function enableEditMode() {
         selection.removeAllRanges();
         selection.addRange(range);
 
+        editableNode.addEventListener('paste', handlePaste);
         editableNode.addEventListener("blur", disableEditMode);
         disableEmptyNodes();
         document.addEventListener('keydown', handleKeyDown);
